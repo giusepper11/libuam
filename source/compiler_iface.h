@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
 
 #include "tgsi/tgsi_text.h"
 #include "tgsi/tgsi_dump.h"
@@ -39,6 +40,10 @@ public:
 
 	bool CompileGlsl(const char* glsl);
 	void OutputDksh(const char* dkshFile);
+
+	// Dusklight alteration: owned in-memory output for the Dawn runtime compiler.
+	// Requires a successful CompileGlsl; failure leaves the caller's bytes intact.
+	bool OutputDkshToMemory(std::vector<uint8_t>& output) const;
 	void OutputRawCode(const char* rawFile);
 	void OutputTgsi(const char* tgsiFile);
 };

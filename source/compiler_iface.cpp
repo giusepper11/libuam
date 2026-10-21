@@ -659,6 +659,48 @@ void DekoCompiler::OutputDksh(const char* dkshFile)
 	}
 }
 
+// Dusklight alteration: preserve OutputDksh's exact file layout without a file.
+bool DekoCompiler::OutputDkshToMemory(std::vector<uint8_t>& output) const
+{
+	if (!m_code || !m_codeSize)
+		return false;
+
+	const uint64_t prefix = m_stage != pipeline_stage_compute ? 0x80 : 0;
+	const uint64_t codeSize = Align256(prefix + m_codeSize) + Align256(uint64_t(m_dataSize));
+	if (codeSize > UINT32_MAX)
+		return false;
+
+	DkshHeader hdr = {};
+	hdr.magic        = DKSH_MAGIC;
+	hdr.header_sz    = sizeof(DkshHeader);
+	hdr.control_sz   = Align256(sizeof(DkshHeader) + sizeof(DkshProgramHeader));
+	hdr.code_sz      = uint32_t(codeSize);
+	hdr.programs_off = sizeof(DkshHeader);
+	hdr.num_programs = 1;
+
+	const uint64_t totalSize = uint64_t(hdr.control_sz) + codeSize;
+	if (totalSize > SIZE_MAX)
+		return false;
+	std::vector<uint8_t> bytes(size_t(totalSize), 0);
+	memcpy(bytes.data(), &hdr, sizeof(hdr));
+	memcpy(bytes.data() + hdr.programs_off, &m_dkph, sizeof(m_dkph));
+	size_t pos = hdr.control_sz;
+	if (m_stage != pipeline_stage_compute)
+	{
+		static const char padding[s_shaderStartOffset] = "lol nvidia why did you make us waste space here";
+		memcpy(bytes.data() + pos, padding, sizeof(padding));
+		pos += sizeof(padding);
+		memcpy(bytes.data() + pos, &m_nvsh, sizeof(m_nvsh));
+		pos += sizeof(m_nvsh);
+	}
+	memcpy(bytes.data() + pos, m_code, m_codeSize);
+	pos = Align256(pos + m_codeSize);
+	if (m_dataSize)
+		memcpy(bytes.data() + pos, m_data, m_dataSize);
+	output.swap(bytes);
+	return true;
+}
+
 void DekoCompiler::OutputRawCode(const char* rawFile)
 {
 	FILE* f = fopen(rawFile, "wb");
