@@ -1,0 +1,2 @@
+option('runtime_library', type: 'boolean', value: false,
+       description: 'Build the compiler as a static runtime library without the CLI entry point')

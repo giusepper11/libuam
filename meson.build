@@ -78,9 +78,18 @@ uam_incs = []
 subdir('source')
 subdir('mesa-imported')
 
-uam = executable(
-	'uam',
-	uam_files,
-	include_directories: uam_incs,
-	install: true,
-)
+if get_option('runtime_library')
+	uam = static_library(
+		'uam',
+		uam_files,
+		include_directories: uam_incs,
+		install: false,
+	)
+else
+	uam = executable(
+		'uam',
+		uam_files,
+		include_directories: uam_incs,
+		install: true,
+	)
+endif
